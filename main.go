@@ -41,9 +41,13 @@ func getIsReady(w http.ResponseWriter, r *http.Request) {
 }
 
 func getUrlHandler(w http.ResponseWriter, r *http.Request) {
+	var contextHeader = ""
 	fmt.Printf("GET request: %s\n", r.URL)
 	for key := range r.Header {
 		fmt.Printf("Header: %s: %s\n", key, r.Header.Get(key))
+		if key == "X-Context-Id" {
+			 contextHeader = r.Header.Get(key)
+		}
 	}
 	pathParts := strings.Split(r.URL.Path, "/")
 	if len(pathParts) >= 3 {
