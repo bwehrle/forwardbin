@@ -41,12 +41,14 @@ func getIsReady(w http.ResponseWriter, r *http.Request) {
 }
 
 func getUrlHandler(w http.ResponseWriter, r *http.Request) {
+	client := &http.Client{}
+	const contextHeaderName = "X-Context-Id"
 	var contextHeader = ""
 	fmt.Printf("GET request: %s\n", r.URL)
 	for key := range r.Header {
 		fmt.Printf("Header: %s: %s\n", key, r.Header.Get(key))
-		if key == "X-Context-Id" {
-			 contextHeader = r.Header.Get(key)
+		if key == contextHeaderName {
+			contextHeader = r.Header.Get(key)
 		}
 	}
 	pathParts := strings.Split(r.URL.Path, "/")
@@ -54,10 +56,26 @@ func getUrlHandler(w http.ResponseWriter, r *http.Request) {
 		// turn the url parts into http://server/path
 		getUrl := fmt.Sprintf("http://%s", strings.Join(pathParts[2:], "/"))
 		log.Printf("Sending GET request to : %s", getUrl)
-		resp, err := http.Get(getUrl)
+		request, err := http.NewRequest("GET", getUrl, nil)
+		if err != nil {
+			log.Printf("Failed to create request: %v", err)
+			w.WriteHeader(500)
+			return
+		}
+		// Enrich request with appropriate headers
+		if contextHeader != "" {
+			request.Header.Add(contextHeaderName, contextHeader)
+		}
 		if err != nil {
 			log.Printf("Failed to send request: %v", err)
 			w.WriteHeader(500)
+			return
+		}
+		resp, err := client.Do(request)
+		if err != nil {
+			log.Printf("Failed to send request: %v", err)
+			w.WriteHeader(500)
+			return
 		} else {
 			defer resp.Body.Close()
 			body, err := io.ReadAll(resp.Body)
